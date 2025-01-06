@@ -1,7 +1,7 @@
 # Smart LED Effects
 
 This supplies a collection of effects for usage with individually addressable LED strips such as the WS2812b.
-Each effect returns a vector of colours that can then be sent to your LED driver.
+Each effect returns an array of colours that can then be sent to your LED driver.
 
 The EffectIterator trait defines two methods:
     - `name`
@@ -52,7 +52,7 @@ use smart_led_effects::{
 //...
 
     const COUNT: usize = 55;
-    let effect = strip::Rainbow::new(COUNT, None);
+    let effect = strip::Rainbow::<COUNT>::new(None);
 
     loop {
         let pixels = effect.next().unwrap();

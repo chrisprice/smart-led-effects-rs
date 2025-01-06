@@ -2,8 +2,7 @@ use crate::strip::EffectIterator;
 use palette::{Mix, Srgb};
 use std::time::{Duration, Instant};
 
-pub struct Timer {
-    count: usize,
+pub struct Timer<const N: usize> {
     duration: Duration,
     start_colour: Srgb,
     end_colour: Srgb,
@@ -13,11 +12,10 @@ pub struct Timer {
     running: bool,
 }
 
-impl Timer {
+impl<const N: usize> Timer<N> {
     const DEFAULT_START_COLOUR: Srgb = Srgb::new(0.0, 0.0, 1.0);
     const DEFAULT_END_COLOUR: Srgb = Srgb::new(1.0, 0.0, 0.0);
     pub fn new(
-        count: usize,
         duration: Duration,
         start_colour: Option<Srgb>,
         end_colour: Option<Srgb>,
@@ -25,12 +23,11 @@ impl Timer {
         start: bool,
     ) -> Self {
         Timer {
-            count,
             duration,
             start_colour: start_colour.unwrap_or(Self::DEFAULT_START_COLOUR),
             end_colour: end_colour.unwrap_or(Self::DEFAULT_END_COLOUR),
             gradient: gradient.unwrap_or(false),
-            pixels_per_second: (count as f32) / (duration.as_millis() as f32 / 1000.0),
+            pixels_per_second: (N as f32) / (duration.as_millis() as f32 / 1000.0),
             start: Instant::now(),
             running: start,
         }
@@ -50,24 +47,24 @@ impl Timer {
     }
 }
 
-impl EffectIterator for Timer {
+impl<const N: usize> EffectIterator<N> for Timer<N> {
     fn name(&self) -> &'static str {
         "Timer"
     }
 
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>> {
-        let mut out = vec![Srgb::new(0u8, 0u8, 0u8); self.count];
+    fn next(&mut self) -> Option<[Srgb<u8>; N]> {
+        let mut out = [Srgb::new(0u8, 0u8, 0u8); N];
         let elapsed = self.start.elapsed().as_secs();
         if elapsed >= self.duration.as_secs() {
             self.reset();
             return Some(out);
         }
-        let pixels = self.count - (self.pixels_per_second * elapsed as f32).ceil() as usize;
+        let pixels = N - (self.pixels_per_second * elapsed as f32).ceil() as usize;
         if self.gradient {
             for (i, pixel) in out.iter_mut().take(pixels).enumerate() {
                 *pixel = self
                     .end_colour
-                    .mix(self.start_colour, i as f32 / self.count as f32)
+                    .mix(self.start_colour, i as f32 / N as f32)
                     .into_format();
             }
         } else {

@@ -2,26 +2,26 @@ use crate::strip::EffectIterator;
 use palette::Srgb;
 use rand::{thread_rng, Rng};
 
-pub struct Fire {
+pub struct Fire<const N: usize> {
     cooling: u8,
     sparking: u8,
-    heat: Vec<u8>,
+    heat: [u8; N],
 }
 
-impl Fire {
+impl<const N: usize> Fire<N> {
     const DEFAULT_COOLING: u8 = 40;
     const DEFAULT_SPARKING: u8 = 120;
-    pub fn new(count: usize, cooling: Option<u8>, sparking: Option<u8>) -> Self {
+    pub fn new(cooling: Option<u8>, sparking: Option<u8>) -> Self {
         Fire {
-            cooling: (((cooling.unwrap_or(Fire::DEFAULT_COOLING) as f32 * 10.0) / count as f32)
+            cooling: (((cooling.unwrap_or(Fire::DEFAULT_COOLING) as f32 * 10.0) / N as f32)
                 + 2.0) as u8,
             sparking: sparking.unwrap_or(Fire::DEFAULT_SPARKING),
-            heat: vec![0; count],
+            heat: [0; N],
         }
     }
 }
 
-impl Fire {
+impl<const N: usize> Fire<N> {
     fn heat_to_colour(val: u8) -> Srgb<u8> {
         if val >= 0x85 {
             let heat_ramp = 3u8.saturating_mul(val - 0x85);
@@ -36,12 +36,12 @@ impl Fire {
     }
 }
 
-impl EffectIterator for Fire {
+impl<const N: usize> EffectIterator<N> for Fire<N> {
     fn name(&self) -> &'static str {
         "Fire"
     }
 
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>> {
+    fn next(&mut self) -> Option<[Srgb<u8>; N]> {
         let mut rng = thread_rng();
 
         /* apply cooling */
@@ -64,11 +64,10 @@ impl EffectIterator for Fire {
             self.heat[y] = self.heat[y].saturating_add(rng.gen_range(160..255));
         }
 
-        Some(
-            self.heat
-                .iter()
-                .map(|x| Fire::heat_to_colour(*x))
-                .collect::<Vec<Srgb<u8>>>(),
-        )
+        let mut out = [Srgb::<u8>::new(0, 0, 0); N];
+        for (i, &heat) in self.heat.iter().enumerate() {
+            out[i] = Fire::heat_to_colour(heat);
+        }
+        Some(out)
     }
 }

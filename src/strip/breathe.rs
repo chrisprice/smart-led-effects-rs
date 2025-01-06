@@ -6,17 +6,16 @@ enum Direction {
     Up,
     Down,
 }
-pub struct Breathe {
+pub struct Breathe<const N: usize> {
     colour: Hsv,
     random_colour: bool,
     direction: Direction,
-    count: usize,
     step: f32,
 }
 
-impl Breathe {
+impl<const N: usize> Breathe<N> {
     const DEFAULT_STEP: f32 = 0.02;
-    pub fn new(count: usize, colour: Option<Srgb>, step_size: Option<f32>) -> Self {
+    pub fn new(colour: Option<Srgb>, step_size: Option<f32>) -> Self {
         let random_colour = colour.is_none();
         let colour: Hsv = match colour {
             Some(colour) => colour.into_color(),
@@ -27,7 +26,6 @@ impl Breathe {
             colour,
             random_colour,
             direction: Direction::Up,
-            count,
             step: step_size.unwrap_or(Self::DEFAULT_STEP),
         };
         me.set_colour();
@@ -43,12 +41,12 @@ impl Breathe {
     }
 }
 
-impl EffectIterator for Breathe {
+impl<const N: usize> EffectIterator<N> for Breathe<N> {
     fn name(&self) -> &'static str {
         "Breathe"
     }
 
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>> {
+    fn next(&mut self) -> Option<[Srgb<u8>; N]> {
         match self.direction {
             Direction::Up => {
                 self.colour.value += self.step;
@@ -65,9 +63,6 @@ impl EffectIterator for Breathe {
             }
         };
 
-        Some(vec![
-            Srgb::from_color(self.colour).into_format::<u8>();
-            self.count
-        ])
+        Some([Srgb::from_color(self.colour).into_format::<u8>(); N])
     }
 }

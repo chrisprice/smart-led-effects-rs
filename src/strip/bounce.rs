@@ -133,14 +133,12 @@ impl Ball {
 /// - `gravity` - The gravity of the balls. If None, the default value will be used.
 /// - `bounciness` - The bounciness of the balls. If None, the default range will be used.
 /// - `speed` - The speed range of the balls. If None, the default range will be used.
-pub struct Bounce {
-    count: usize,
+pub struct Bounce<const N: usize> {
     balls: Vec<Ball>,
 }
 
-impl Bounce {
+impl<const N: usize> Bounce<N> {
     pub fn new(
-        count: usize,
         colour: Option<Srgb>,
         balls: Option<usize>,
         gravity: Option<f32>,
@@ -157,18 +155,17 @@ impl Bounce {
             ));
         }
         Bounce {
-            count,
             balls: new_balls,
         }
     }
 }
 
-impl EffectIterator for Bounce {
+impl<const N: usize> EffectIterator<N> for Bounce<N> {
     fn name(&self) -> &'static str {
         "Bounce"
     }
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>> {
-        let mut out = vec![Srgb::<u8>::new(0, 0, 0); self.count];
+    fn next(&mut self) -> Option<[Srgb<u8>; N]> {
+        let mut out = [Srgb::<u8>::new(0, 0, 0); N];
         for ball in self.balls.iter_mut() {
             ball.update();
             let pixel = ball.location();
@@ -181,13 +178,13 @@ impl EffectIterator for Bounce {
                     Direction::Up => ball.location() as i32 - i,
                     Direction::Down => ball.location() as i32 + i,
                 };
-                if pixel < self.count as i32 && pixel >= 0 {
+                if pixel < N as i32 && pixel >= 0 {
                     let mut colour: Srgb = ball.colour.into_format();
                     colour = colour.darken_fixed(i as f32 / tail_len as f32);
                     out[pixel as usize] = colour.into_format::<u8>();
                 }
             }
-            if pixel < self.count {
+            if pixel < N {
                 out[pixel] = ball.colour.into_format::<u8>();
             }
         }

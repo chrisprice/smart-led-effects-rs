@@ -29,8 +29,7 @@ use super::EffectIterator;
 /// let mut effect = Strobe::new(count, colour, period, decay);
 /// ```
 #[derive(Debug)]
-pub struct Strobe {
-    count: usize,
+pub struct Strobe<const N: usize> {
     colour: Option<Hsv>,
     current_colour: Hsv,
     period: Duration,
@@ -38,9 +37,8 @@ pub struct Strobe {
     start: Instant,
 }
 
-impl Strobe {
+impl<const N: usize> Strobe<N> {
     pub fn new(
-        count: usize,
         colour: Option<Srgb<u8>>,
         period: Duration,
         decay: Option<f32>,
@@ -52,7 +50,6 @@ impl Strobe {
         };
 
         Strobe {
-            count,
             colour,
             current_colour,
             period,
@@ -86,19 +83,19 @@ impl Strobe {
     }
 }
 
-impl EffectIterator for Strobe {
+impl<const N: usize> EffectIterator<N> for Strobe<N> {
     fn name(&self) -> &'static str {
         "Strobe"
     }
 
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>> {
+    fn next(&mut self) -> Option<[Srgb<u8>; N]> {
         if self.fade() {
             let elapsed = self.start.elapsed().as_secs();
             if elapsed >= self.period.as_secs() {
                 self.reset();
             }
         }
-        let out = vec![Srgb::from_color(self.current_colour).into_format::<u8>(); self.count];
+        let out = [Srgb::from_color(self.current_colour).into_format::<u8>(); N];
         Some(out)
     }
 }
