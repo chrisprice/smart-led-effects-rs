@@ -18,7 +18,7 @@ impl Direction {
     }
 }
 
-pub struct Cylon {
+pub struct Cylon<const N: usize> {
     colour: Hsv,
     direction: Direction,
     brightness: Vec<f32>,
@@ -27,12 +27,12 @@ pub struct Cylon {
     fade: f32,
 }
 
-impl Cylon {
+impl<const N: usize> Cylon<N> {
     const DEFAULT_SIZE: usize = 4;
     const DEFAULT_FADE: f32 = 0.2;
 
-    pub fn new(count: usize, colour: Srgb<u8>, size: Option<usize>, fade: Option<f32>) -> Self {
-        let mut brightness = vec![0.0; count];
+    pub fn new(colour: Srgb<u8>, size: Option<usize>, fade: Option<f32>) -> Self {
+        let mut brightness = vec![0.0; N];
         let size = size.unwrap_or(Cylon::DEFAULT_SIZE);
 
         for pixel in brightness.iter_mut().take(size) {
@@ -50,12 +50,12 @@ impl Cylon {
     }
 }
 
-impl EffectIterator for Cylon {
+impl<const N: usize> EffectIterator<N> for Cylon<N> {
     fn name(&self) -> &'static str {
         "Cylon"
     }
 
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>> {
+    fn next(&mut self) -> Option<[Srgb<u8>; N]> {
         let len = self.brightness.len();
 
         let mut trail: Vec<f32> = vec![0.0; len];
@@ -94,7 +94,7 @@ impl EffectIterator for Cylon {
             }
         };
 
-        let out: Vec<Srgb<u8>> = self
+        let out: [Srgb<u8>; N] = self
             .brightness
             .iter()
             .zip(trail.iter())
@@ -103,7 +103,11 @@ impl EffectIterator for Cylon {
                 pixel.value = (x + y).min(1.0);
                 Srgb::from_color(pixel).into_format::<u8>()
             })
-            .collect();
+            .collect::<Vec<Srgb<u8>>>()
+            .try_into()
+            .unwrap_or_else(|v: Vec<Srgb<u8>>| {
+                panic!("Expected a Vec of length {} but it was {}", N, v.len())
+            });
 
         Some(out)
     }

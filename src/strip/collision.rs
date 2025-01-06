@@ -42,31 +42,29 @@ impl Particle {
     }
 }
 
-pub struct Collision {
+pub struct Collision<const N: usize> {
     particles: Vec<Particle>,
-    count: usize,
     shatter: bool,
     shattered: bool,
-    current: Vec<Srgb>,
+    current: [Srgb; N],
 }
 
-impl Collision {
-    pub fn new(count: usize, shatter: Option<bool>) -> Self {
+impl<const N: usize> Collision<N> {
+    pub fn new(shatter: Option<bool>) -> Self {
         let p1 = Particle::new(0, false);
-        let p2 = Particle::new(count as i32, true);
+        let p2 = Particle::new(N as i32, true);
 
         Collision {
-            count,
             particles: vec![p1, p2],
             shatter: shatter.unwrap_or(true),
             shattered: false,
-            current: vec![Srgb::new(0.0, 0.0, 0.0); count],
+            current: [Srgb::new(0.0, 0.0, 0.0); N],
         }
     }
 
     pub fn reset(&mut self) {
         let p1 = Particle::new(0, false);
-        let p2 = Particle::new(self.count as i32 - 1, true);
+        let p2 = Particle::new(N as i32 - 1, true);
 
         self.particles = vec![p1, p2];
         self.shattered = false;
@@ -89,21 +87,21 @@ impl Collision {
         }
         self.shattered = true;
 
-        self.current[self.count / 2] = Srgb::new(1.0, 1.0, 1.0);
+        self.current[N / 2] = Srgb::new(1.0, 1.0, 1.0);
 
         let mut hsv = Hsv::from_color(self.particles[0].colour);
         hsv.value = 1.0;
-        let normalize = 1.0 / self.count as f32;
+        let normalize = 1.0 / N as f32;
 
         let mut rng = thread_rng();
 
-        for i in 0..(self.count / 2) {
+        for i in 0..(N / 2) {
             if rng.gen_range(0.0..1.0) < 0.5 {
                 let hsv = hsv.darken(1.0 - normalize * i as f32);
                 self.current[i] = Srgb::from_color(hsv);
             }
         }
-        for i in (self.count / 2)..(self.count) {
+        for i in (N / 2)..(N) {
             if rng.gen_range(0.0..1.0) < 0.5 {
                 let hsv = hsv.darken(normalize * i as f32);
                 self.current[i] = Srgb::from_color(hsv);
@@ -111,20 +109,20 @@ impl Collision {
         }
     }
 
-    pub fn move_particles(&mut self) -> Vec<Srgb<u8>> {
-        let mut out = vec![Srgb::<u8>::new(0, 0, 0); self.count];
+    pub fn move_particles(&mut self) -> [Srgb<u8>; N] {
+        let mut out = [Srgb::<u8>::new(0, 0, 0); N];
         for particle in self.particles.iter_mut() {
-            if particle.position >= 0 && particle.position < self.count as i32 {
+            if particle.position >= 0 && particle.position < N as i32 {
                 for i in 0..particle.size {
                     if particle.reverse {
                         if particle.position + i as i32 >= 0
-                            && i as i32 + particle.position < self.count as i32
+                            && i as i32 + particle.position < N as i32
                         {
                             out[(particle.position + i as i32) as usize] =
                                 particle.colour.into_format();
                         }
                     } else if particle.position - i as i32 >= 0
-                        && (particle.position - i as i32) < self.count as i32
+                        && (particle.position - i as i32) < N as i32
                     {
                         out[(particle.position - i as i32) as usize] =
                             particle.colour.into_format();
@@ -137,12 +135,12 @@ impl Collision {
     }
 }
 
-impl EffectIterator for Collision {
+impl<const N: usize> EffectIterator<N> for Collision<N> {
     fn name(&self) -> &'static str {
         "Collision"
     }
 
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>> {
+    fn next(&mut self) -> Option<[Srgb<u8>; N]> {
         if !self.shattered {
             for particle in self.particles.iter_mut() {
                 if particle.reverse {
@@ -156,7 +154,7 @@ impl EffectIterator for Collision {
                 self.shatter();
             }
 
-            if self.particles[0].position < 0 && self.particles[1].position >= self.count as i32 {
+            if self.particles[0].position < 0 && self.particles[1].position >= N as i32 {
                 self.reset();
             }
 
@@ -177,7 +175,7 @@ impl EffectIterator for Collision {
                 }
             }
             self.reset();
-            Some(vec![Srgb::<u8>::new(0, 0, 0); self.count])
+            Some([Srgb::<u8>::new(0, 0, 0); N])
         }
     }
 }

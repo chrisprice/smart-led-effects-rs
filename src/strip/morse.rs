@@ -1,12 +1,12 @@
 use crate::strip::{EffectIterator, Wipe};
 use palette::Srgb;
 
-pub struct Morse {
-    wipe: Wipe,
+pub struct Morse<const N: usize> {
+    wipe: Wipe<N>,
 }
 
-impl Morse {
-    pub fn new(count: usize, message: &str, colour: Option<Srgb<u8>>, reverse: bool) -> Self {
+impl<const N: usize> Morse<N> {
+    pub fn new(message: &str, colour: Option<Srgb<u8>>, reverse: bool) -> Self {
         let code = Self::string_to_morse(message);
 
         let colour = colour.unwrap_or(Srgb::new(255, 0, 0));
@@ -16,7 +16,7 @@ impl Morse {
             .map(|&x| if x == 1 { colour } else { Srgb::new(0, 0, 0) })
             .collect::<Vec<Srgb<u8>>>();
 
-        let wipe = Wipe::new(count, code, reverse);
+        let wipe = Wipe::new(code, reverse);
 
         Morse { wipe }
     }
@@ -71,12 +71,12 @@ impl Morse {
     }
 }
 
-impl EffectIterator for Morse {
+impl<const N: usize> EffectIterator<N> for Morse<N> {
     fn name(&self) -> &'static str {
         "Morse"
     }
 
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>> {
+    fn next(&mut self) -> Option<[Srgb<u8>; N]> {
         self.wipe.next()
     }
 }

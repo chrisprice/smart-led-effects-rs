@@ -1,6 +1,6 @@
 use palette::Srgb;
 
-pub trait EffectIterator {
+pub trait EffectIterator<const N: usize> {
     fn name(&self) -> &'static str;
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>>;
+    fn next(&mut self) -> Option<[Srgb<u8>; N]>;
 }

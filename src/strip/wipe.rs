@@ -2,22 +2,21 @@ use crate::strip::EffectIterator;
 use palette::{FromColor, Hsv, Srgb};
 use rand::Rng;
 
-pub struct Wipe {
+pub struct Wipe<const N: usize> {
     position: usize,
     buffer: Vec<Srgb<u8>>,
     reverse: bool,
     end: usize,
-    count: usize,
     randomize: bool,
 }
 
-impl Wipe {
-    pub fn new(count: usize, data: Vec<Srgb<u8>>, reverse: bool) -> Self {
-        let mut buffer = vec![Srgb::<u8>::new(0, 0, 0); count];
+impl<const N: usize> Wipe<N> {
+    pub fn new(data: Vec<Srgb<u8>>, reverse: bool) -> Self {
+        let mut buffer = vec![Srgb::<u8>::new(0, 0, 0); N];
         buffer.extend(data);
-        buffer.extend(vec![Srgb::<u8>::new(0, 0, 0); count]);
+        buffer.extend(vec![Srgb::<u8>::new(0, 0, 0); N]);
 
-        let end = buffer.len() - count;
+        let end = buffer.len() - N;
 
         Wipe {
             position: match reverse {
@@ -27,13 +26,12 @@ impl Wipe {
             buffer,
             reverse,
             end,
-            count,
             randomize: false,
         }
     }
 
-    pub fn colour_wipe(count: usize, colour: Option<Srgb<u8>>, reverse: bool) -> Self {
-        let mut s = Wipe::new(count, vec![Srgb::new(0, 0, 0); count], reverse);
+    pub fn colour_wipe(colour: Option<Srgb<u8>>, reverse: bool) -> Self {
+        let mut s = Wipe::new(vec![Srgb::new(0, 0, 0); N], reverse);
         match colour {
             Some(colour) => s.fill_wipe(colour),
             None => s.randomize_colour_wipe(),
@@ -42,9 +40,9 @@ impl Wipe {
     }
 
     fn fill_wipe(&mut self, colour: Srgb<u8>) {
-        let mut buffer = vec![Srgb::<u8>::new(0, 0, 0); self.count];
-        buffer.extend(vec![colour; self.count]);
-        buffer.extend(vec![Srgb::<u8>::new(0, 0, 0); self.count]);
+        let mut buffer = vec![Srgb::<u8>::new(0, 0, 0); N];
+        buffer.extend(vec![colour; N]);
+        buffer.extend(vec![Srgb::<u8>::new(0, 0, 0); N]);
         self.buffer = buffer;
     }
 
@@ -57,19 +55,23 @@ impl Wipe {
     }
 }
 
-impl EffectIterator for Wipe {
+impl<const N: usize> EffectIterator<N> for Wipe<N> {
     fn name(&self) -> &'static str {
         "Wipe"
     }
 
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>> {
+    fn next(&mut self) -> Option<[Srgb<u8>; N]> {
         let out = self
             .buffer
             .iter()
             .skip(self.position)
-            .take(self.count)
+            .take(N)
             .copied()
-            .collect::<Vec<Srgb<u8>>>();
+            .collect::<Vec<Srgb<u8>>>()
+            .try_into()
+            .unwrap_or_else(|v: Vec<Srgb<u8>>| {
+                panic!("Expected a Vec of length {} but it was {}", N, v.len())
+            });
 
         if self.reverse {
             self.position -= 1;

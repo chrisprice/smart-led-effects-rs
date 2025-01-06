@@ -10,15 +10,14 @@ pub struct Sparkle {
     location: usize,
 }
 
-pub struct Christmas {
+pub struct Christmas<const N: usize> {
     frequency: u8,
     probability: f32,
     fade: f32,
     sparkles: Vec<Sparkle>,
-    length: usize,
 }
 
-impl Christmas {
+impl<const N: usize> Christmas<N> {
     const DEFAULT_FREQUENCY: u8 = 0x04;
     const DEFAULT_PROBABILITY: f32 = 0.1;
     const DEFAULT_FADE: f32 = 0.4;
@@ -26,7 +25,6 @@ impl Christmas {
     const BACKGROUND: Srgb = Srgb::new(6.0 / 255.0, 108.0 / 255.0, 22.0 / 255.0);
 
     pub fn new(
-        count: usize,
         colour: Option<Srgb<u8>>,
         sparkle: Option<u8>,
         probability: Option<f32>,
@@ -44,12 +42,11 @@ impl Christmas {
             fade: fade.unwrap_or(Christmas::DEFAULT_FADE),
             probability: probability.unwrap_or(Christmas::DEFAULT_PROBABILITY),
             sparkles: Vec::new(),
-            length: count,
         }
     }
 }
 
-impl Christmas {
+impl<const N: usize> Christmas<N> {
     fn generate_sparkle(&mut self) {
         let mut rng = thread_rng();
 
@@ -58,7 +55,7 @@ impl Christmas {
             return;
         }
 
-        let index = rng.gen_range(0..self.length);
+        let index = rng.gen_range(0..N);
 
         let c_index = rng.gen_range(0.0..1.0);
 
@@ -86,12 +83,12 @@ impl Christmas {
     }
 }
 
-impl EffectIterator for Christmas {
+impl<const N: usize> EffectIterator<N> for Christmas<N> {
     fn name(&self) -> &'static str {
         "Christmas"
     }
 
-    fn next(&mut self) -> Option<Vec<Srgb<u8>>> {
+    fn next(&mut self) -> Option<[Srgb<u8>; N]> {
         self.fade_sparkles();
 
         let chances = thread_rng().gen_range(0..self.frequency);
@@ -99,12 +96,12 @@ impl EffectIterator for Christmas {
             self.generate_sparkle();
         }
 
-        let mut out: Vec<Srgb> = vec![self::Christmas::BACKGROUND; self.length];
+        let mut out: [Srgb<u8>; N] = [self::Christmas::BACKGROUND.into_format(); N];
 
         for sparkle in self.sparkles.iter() {
             out[sparkle.location].mix_assign(sparkle.colour, sparkle.intensity);
         }
 
-        Some(out.iter().map(|&c| c.into_format::<u8>()).collect())
+        Some(out)
     }
 }
